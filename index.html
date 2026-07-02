@@ -1,0 +1,1976 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>rice jump! - 사운드 레코더 & 데모 마스터피스</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@500;800;900&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+    
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background-color: #05070f;
+      color: #f1f5f9;
+      user-select: none;
+      overflow-x: hidden;
+    }
+    .font-game {
+      font-family: 'Press Start 2P', cursive;
+    }
+    .font-digital {
+      font-family: 'Orbitron', sans-serif;
+    }
+    #gameCanvas {
+      box-shadow: 0 0 30px rgba(14, 165, 233, 0.15);
+      border: 3px solid #1e293b;
+      background: #0b0f19;
+      transition: background 1.5s ease;
+    }
+    .rainbow-text {
+      background: linear-gradient(to right, #ef4444, #f59e0b, #10b981, #3b82f6, #8b5cf6, #ec4899);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: rainbow-scroll 3s linear infinite;
+    }
+    @keyframes rainbow-scroll {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .touch-none {
+      touch-action: none;
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen items-center justify-between p-4 md:p-6">
+
+  <!-- 상단 헤더 영역 -->
+  <header class="w-full max-w-4xl flex flex-col sm:flex-row justify-between items-center gap-4 mb-3">
+    <div class="flex items-center gap-3">
+      <div class="p-2 bg-sky-950/40 rounded-xl border border-sky-500/30 animate-pulse">
+        <i data-lucide="music-4" class="w-7 h-7 text-sky-400"></i>
+      </div>
+      <div>
+        <h1 class="text-3xl font-extrabold font-digital tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-400">
+          RICE JUMP! <span class="text-xs font-semibold px-2 py-0.5 bg-sky-600/30 border border-sky-500 text-sky-300 rounded ml-1 animate-pulse">데모 & 오디오 마스터 v1.5</span>
+        </h1>
+        <p class="text-xs text-slate-400 font-medium">게임 소리 자체 믹싱 녹화 지원! 대기 시간 15초 뒤 시작되는 환상적인 AI 데모 쇼!</p>
+      </div>
+    </div>
+
+    <!-- 설정 및 정보 버튼 -->
+    <div class="flex items-center gap-2">
+      <button id="soundToggle" class="px-3 py-2 bg-sky-950/40 border border-sky-500/30 text-sky-200 rounded-lg flex items-center gap-1.5 transition text-xs">
+        <i id="soundIcon" data-lucide="volume-2" class="w-4 h-4 text-sky-400"></i>
+        <span>소리 켬</span>
+      </button>
+      <button id="helpBtn" class="px-3 py-2 bg-slate-800/80 hover:bg-slate-700 text-slate-200 rounded-lg flex items-center gap-1.5 transition text-xs border border-slate-700">
+        <i data-lucide="help-circle" class="w-4 h-4 text-amber-400"></i>
+        <span>게임 방법</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 메인 게임 영역 -->
+  <main class="w-full max-w-4xl flex flex-col lg:flex-row gap-6 items-center justify-center">
+    
+    <!-- 캔버스 컨테이너 -->
+    <div class="relative flex flex-col items-center">
+      <!-- 상태 인터페이스 표시기 -->
+      <div class="w-full flex justify-between items-center mb-2 px-1 text-sm font-semibold">
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-1.5">
+            <span class="text-slate-400">STAGE:</span>
+            <span id="stageVal" class="text-xl font-digital text-amber-400">1</span>
+            <span id="worldThemeName" class="text-xs text-slate-500 font-normal">(지상)</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="text-slate-400">SCORE:</span>
+            <span id="scoreVal" class="text-xl font-digital text-cyan-400">0000</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="text-slate-400">LIVES:</span>
+            <span id="livesContainer" class="flex items-center gap-0.5 text-red-500 text-lg">
+              ❤️ ❤️ ❤️
+            </span>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <!-- 데모 중임을 선언하는 인디케이터 -->
+          <div id="demoBadge" class="hidden items-center gap-1.5 px-3 py-0.5 bg-yellow-500 border border-yellow-400 text-slate-950 rounded text-xs font-black animate-pulse">
+            <span>🎮 DEMO PLAY</span>
+          </div>
+          <!-- 화면 녹화 전용 인디케이터 -->
+          <div id="recordingBadge" class="hidden items-center gap-1.5 px-2 py-0.5 bg-red-600 border border-red-500 text-white rounded text-xs font-semibold animate-pulse">
+            <span class="w-2 h-2 rounded-full bg-white inline-block"></span>
+            <span id="recTypeLabel">REC (1:00)</span>
+          </div>
+          <div id="cheatIndicator" class="hidden px-2.5 py-0.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded text-xs font-game animate-bounce">
+            ⚡ NUJONKU ⚡
+          </div>
+        </div>
+      </div>
+
+      <!-- 게임 캔버스 -->
+      <div class="relative rounded-2xl overflow-hidden">
+        <canvas id="gameCanvas" width="800" height="400" class="w-full max-w-full block bg-slate-950"></canvas>
+        
+        <!-- 오버레이 화면 (시작 / 게임오버 / 클리어 엔딩) -->
+        <div id="overlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center transition-all duration-300">
+          <div id="overlayContent" class="max-w-md">
+            <h2 id="overlayTitle" class="text-4xl font-black mb-2 text-yellow-400 tracking-wider">RICE JUMP!</h2>
+            <p id="overlayDesc" class="text-slate-300 text-sm mb-6 leading-relaxed">
+              점프하여 모기를 피하고 쌀알(RICE)과 맛있는 누존쿠 쿠키를 획득하세요!<br>
+              <span class="text-red-400 font-bold">⚠️ 경고: 맵 곳곳에 무작위로 배치된 빨간 "자폭" 장치를 건드리면 "딸깍" 소리와 함께 폭발합니다!</span>
+            </p>
+            
+            <button id="startBtn" class="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold rounded-xl shadow-lg shadow-cyan-500/20 hover:shadow-cyan-400/30 transform hover:-translate-y-0.5 transition duration-150 text-lg w-full max-w-xs">
+              게임 시작!
+            </button>
+            <p id="demoCountdown" class="text-slate-500 text-[11px] mt-4 font-digital">15초 동안 대기 시 오토 데모 비디오가 실행됩니다...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 모바일 및 터치 디바이스 조작 패널 -->
+      <div class="w-full grid grid-cols-2 gap-3 mt-4 lg:hidden">
+        <button id="btnLeft" class="touch-none h-16 bg-slate-800 active:bg-slate-700 border border-slate-700 rounded-xl flex flex-col items-center justify-center text-slate-300 font-bold">
+          <i data-lucide="arrow-left" class="w-6 h-6"></i>
+          <span class="text-[10px]">왼쪽 이동</span>
+        </button>
+        <button id="btnRight" class="touch-none h-16 bg-slate-800 active:bg-slate-700 border border-slate-700 rounded-xl flex flex-col items-center justify-center text-slate-300 font-bold">
+          <i data-lucide="arrow-right" class="w-6 h-6"></i>
+          <span class="text-[10px]">오른쪽 이동</span>
+        </button>
+        <button id="btnJump" class="touch-none col-span-2 h-20 bg-gradient-to-r from-cyan-600 to-blue-600 active:from-cyan-500 active:to-blue-500 border border-cyan-500 rounded-xl flex flex-col items-center justify-center text-white font-black text-lg shadow-lg">
+          <i data-lucide="arrow-up" class="w-8 h-8"></i>
+          <span>JUMP!</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 우측 게임 정보 판넬 (데스크톱 전용) -->
+    <aside class="hidden md:flex flex-col gap-4 w-full lg:w-72 self-stretch">
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 flex-1">
+        <h3 class="text-sm font-bold text-slate-300 mb-3 flex items-center gap-1.5 border-b border-slate-800 pb-2">
+          <i data-lucide="info" class="w-4 h-4 text-cyan-400"></i>
+          고해상도 오디오 정보
+        </h3>
+        <ul class="space-y-3.5 text-xs text-slate-400">
+          <li class="flex items-start gap-2">
+            <span class="text-emerald-400 mt-0.5">🌱</span>
+            <span><strong>지상 (STAGE 1 ~ 7):</strong><br>명랑하고 따뜻한 4중 화음 & 리얼 드럼 비트 BGM.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-red-400 mt-0.5">🌋</span>
+            <span><strong>지하 (STAGE 8 ~ 14):</strong><br>긴장감을 조여오는 딥 베이스 코드 기어 & 하이햇 스네어 드럼.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-cyan-400 mt-0.5">🌊</span>
+            <span><strong>물 속 (STAGE 15 ~ 22):</strong><br>부드러운 사각 파형 화음 필터 & 로파이 리듬 드럼.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-purple-400 mt-0.5">🌌</span>
+            <span><strong>하늘 (STAGE 23 ~ 29):</strong><br>초고속 아르페지오 은하계 사운드 & 테크노 드럼 테마 BGM.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-amber-400 mt-0.5">👑</span>
+            <span><strong>클리어 (STAGE 30):</strong><br>모든 위험을 물리치고 정화된 은은하고 감동적인 엔딩 아르페지오 곡.</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center justify-center">
+        <span class="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-1">최고 기록</span>
+        <div id="highScoreVal" class="text-3xl font-digital font-black text-amber-400">0000</div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- 하단 푸터 -->
+  <footer class="w-full max-w-4xl text-center text-[11px] text-slate-600 mt-6 border-t border-slate-950 pt-4">
+    <p>© 2026 rice jump! Team. All rights reserved.</p>
+  </footer>
+
+  <!-- 알림 토스트 -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2.5 bg-slate-900 border border-cyan-500/30 text-cyan-200 rounded-xl text-xs flex items-center gap-2 shadow-2xl opacity-0 translate-y-4 pointer-events-none transition-all duration-300 z-50">
+    <i data-lucide="bell" class="w-4 h-4 text-cyan-400"></i>
+    <span id="toastMsg">사운드가 연동되었습니다.</span>
+  </div>
+
+  <!-- 게임 가이드 모달 -->
+  <div id="helpModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 relative">
+      <button id="closeHelpBtn" class="absolute top-4 right-4 text-slate-400 hover:text-white transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+      <h3 class="text-xl font-bold text-amber-400 mb-4 flex items-center gap-2">
+        <i data-lucide="help-circle"></i>
+        게임 가이드
+      </h3>
+      <div class="space-y-4 text-xs text-slate-300 leading-relaxed">
+        <p><strong>🍚 Rice Jump! - 데모 에디션 v1.5</strong><br>위협적인 날파리들과 숨은 자폭 장치를 피해 쌀알을 수집하세요!</p>
+        <p><strong>🚨 비동기 자폭 위협:</strong><br>언제 어디서 나타날지 모르는 원형 자폭 버튼은 밟는 순간 돌이킬 수 없는 폭발을 일으키니 발걸음을 매우 극도로 주시해야 합니다.</p>
+        <p><strong>🦟 이이잉-! 날카로운 날갯소리:</strong><br>지나가던 모기들의 귓가 날갯소리가 보강되었습니다. 엄청나게 커다란 모기가 나타나면 찢어지는 듯한 리얼 모기 소리가 화면에 휘몰아칩니다!</p>
+      </div>
+      <button id="closeHelpBtn2" class="mt-6 w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-bold text-xs transition">
+        확인했습니다
+      </button>
+    </div>
+  </div>
+
+  <!-- Sound Synth 및 게임 로직 JS -->
+  <script>
+    lucide.createIcons();
+
+    // ----------------------------------------------------
+    // 오디오 합성 엔진 (Web Audio API)
+    // ----------------------------------------------------
+    let audioCtx = null;
+    let isSoundOn = true;
+    let bgmInterval = null;
+    let noiseBuffer = null; 
+    let activeBuzzOsc = null; 
+    let activeBuzzGain = null;
+    let normalBuzzOsc = null; 
+    let normalBuzzGain = null;
+
+    // [신규 피처] 녹화 시 게임 오디오 트랙을 통합하기 위한 목적지 노드
+    let recordAudioDestination = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        buildNoiseBuffer();
+        
+        // 오디오 녹음을 위한 목적지 버스 노드 인스턴싱화
+        recordAudioDestination = audioCtx.createMediaStreamAudioDestination();
+      }
+    }
+
+    // 드럼 스네어/하이햇용 화이트 노이즈 빌딩
+    function buildNoiseBuffer() {
+      if (!audioCtx) return;
+      const bufferSize = audioCtx.sampleRate;
+      noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+    }
+
+    // 오디오 출력과 레코더 오디오 노드 동시 분배 연동 함수
+    function connectAudioOutput(sourceNode, gainNode) {
+      if (!audioCtx) return;
+      
+      // 1. 실제 사용자의 스피커/이어폰으로 연결
+      gainNode.connect(audioCtx.destination);
+      
+      // 2. [신규 피처] 화면 녹화용 오디오 목적지 노드에도 함께 다중 라우팅 믹싱
+      if (recordAudioDestination) {
+        gainNode.connect(recordAudioDestination);
+      }
+    }
+
+    // 소리 톤 생성 도우미 (전 파형 매칭 지원)
+    function playTone(freq, type, duration, volume = 0.1) {
+      if (!isSoundOn) return;
+      initAudio();
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      
+      gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+      
+      osc.connect(gainNode);
+      connectAudioOutput(osc, gainNode);
+      
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    // 레트로 노이즈 드럼 스네어/하이햇 연주 함수
+    function playNoiseDrum(isSnare = false, duration = 0.15, volume = 0.05) {
+      if (!isSoundOn || !noiseBuffer) return;
+      initAudio();
+      
+      const noiseNode = audioCtx.createBufferSource();
+      noiseNode.buffer = noiseBuffer;
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = isSnare ? 'bandpass' : 'highpass';
+      filter.frequency.setValueAtTime(isSnare ? 1000 : 7000, audioCtx.currentTime);
+
+      const gainNode = audioCtx.createGain();
+      gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+
+      noiseNode.connect(filter);
+      filter.connect(gainNode);
+      connectAudioOutput(filter, gainNode);
+
+      noiseNode.start();
+      noiseNode.stop(audioCtx.currentTime + duration);
+    }
+
+    // 게임 효과음 팩토리
+    const Sound = {
+      jump: () => {
+        playTone(180, 'triangle', 0.12, 0.12);
+        setTimeout(() => playTone(360, 'triangle', 0.18, 0.12), 40);
+      },
+      eatRice: () => {
+        playTone(523.25, 'sine', 0.08, 0.08); 
+        setTimeout(() => playTone(659.25, 'sine', 0.08, 0.08), 35); 
+        setTimeout(() => playTone(783.99, 'sine', 0.12, 0.08), 70); 
+      },
+      eatNujonku: () => {
+        const notes = [440, 554, 659, 880, 1109];
+        notes.forEach((f, idx) => {
+          setTimeout(() => playTone(f, 'sine', 0.2, 0.12), idx * 70);
+        });
+      },
+      clickSwitch: () => {
+        playTone(1600, 'triangle', 0.02, 0.35);
+        setTimeout(() => {
+          playTone(800, 'square', 0.03, 0.2);
+        }, 15);
+      },
+      beepSignal: () => {
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((f, idx) => {
+          setTimeout(() => playTone(f, 'sine', 0.15, 0.12), idx * 60);
+        });
+      },
+      nujonkuLost: () => {
+        const notes = [700, 480, 310, 150];
+        notes.forEach((f, idx) => {
+          setTimeout(() => playTone(f, 'sawtooth', 0.25, 0.18), idx * 80);
+        });
+      },
+      hit: () => {
+        playTone(90, 'sawtooth', 0.3, 0.2);
+      },
+      selfDestruct: () => {
+        initAudio();
+        for(let i=0; i<25; i++) {
+          setTimeout(() => {
+            playTone(50 + Math.random() * 120, 'sawtooth', 0.5, 0.4);
+            playTone(30 + Math.random() * 50, 'triangle', 0.7, 0.4);
+          }, i * 25);
+        }
+      }
+    };
+
+    // ----------------------------------------------------
+    // 실시간 모기 날갯소리 합성 시스템 (이이이이이잉~!)
+    // ----------------------------------------------------
+    function updateMosquitoBuzzSound(hasNormal, hasHuge) {
+      if (!isSoundOn || (!gameActive && !isDemoMode)) {
+        stopMosquitoBuzz();
+        return;
+      }
+      initAudio();
+
+      // 1. 일반 모기 비행 소리
+      if (hasNormal) {
+        if (!normalBuzzOsc) {
+          normalBuzzOsc = audioCtx.createOscillator();
+          normalBuzzGain = audioCtx.createGain();
+          normalBuzzOsc.type = 'triangle';
+          normalBuzzOsc.frequency.setValueAtTime(450, audioCtx.currentTime); 
+          
+          const mod = audioCtx.createOscillator();
+          const modGain = audioCtx.createGain();
+          mod.frequency.value = 16; 
+          modGain.gain.value = 15;
+          
+          mod.connect(modGain);
+          modGain.connect(normalBuzzOsc.frequency);
+          mod.start();
+
+          normalBuzzGain.gain.setValueAtTime(0.015, audioCtx.currentTime);
+          normalBuzzOsc.connect(normalBuzzGain);
+          connectAudioOutput(normalBuzzOsc, normalBuzzGain);
+          normalBuzzOsc.start();
+        }
+      } else {
+        if (normalBuzzOsc) {
+          try { normalBuzzOsc.stop(); } catch(e){}
+          normalBuzzOsc = null;
+          normalBuzzGain = null;
+        }
+      }
+
+      // 2. 엄청 커다란 보라 모기 소리 (날카로운 톱니파 비행음)
+      if (hasHuge) {
+        if (!activeBuzzOsc) {
+          activeBuzzOsc = audioCtx.createOscillator();
+          activeBuzzGain = audioCtx.createGain();
+          
+          activeBuzzOsc.type = 'sawtooth';
+          activeBuzzOsc.frequency.setValueAtTime(320, audioCtx.currentTime);
+
+          const vibrato = audioCtx.createOscillator();
+          const vibratoGain = audioCtx.createGain();
+          vibrato.frequency.value = 24; 
+          vibratoGain.gain.value = 35; 
+
+          vibrato.connect(vibratoGain);
+          vibratoGain.connect(activeBuzzOsc.frequency);
+          vibrato.start();
+
+          activeBuzzGain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+          activeBuzzOsc.connect(activeBuzzGain);
+          connectAudioOutput(activeBuzzOsc, activeBuzzGain);
+          activeBuzzOsc.start();
+        }
+      } else {
+        if (activeBuzzOsc) {
+          try { activeBuzzOsc.stop(); } catch(e){}
+          activeBuzzOsc = null;
+          activeBuzzGain = null;
+        }
+      }
+    }
+
+    function stopMosquitoBuzz() {
+      if (activeBuzzOsc) {
+        try { activeBuzzOsc.stop(); } catch(e){}
+        activeBuzzOsc = null;
+        activeBuzzGain = null;
+      }
+      if (normalBuzzOsc) {
+        try { normalBuzzOsc.stop(); } catch(e){}
+        normalBuzzOsc = null;
+        normalBuzzGain = null;
+      }
+    }
+
+    // ----------------------------------------------------
+    // 다이내믹 테마별 오케스트레이션 루프 BGM
+    // ----------------------------------------------------
+    let bgmTick = 0;
+    
+    function getCurrentWorld(stage) {
+      if (stage >= 30) return "ending";
+      if (stage >= 23) return "sky";      
+      if (stage >= 15) return "water";    
+      if (stage >= 8)  return "under";    
+      return "ground";                    
+    }
+
+    // [신규 피처] 노이즈와 모든 파형(사인파, 삼각파, 네모파, 톱니파 등)을 결합한 경쾌한 오리지널 타이틀 곡
+    function playTitleThemeMusic() {
+      if (bgmInterval) clearInterval(bgmInterval);
+      
+      bgmInterval = setInterval(() => {
+        if (!isSoundOn) return;
+        bgmTick++;
+
+        const beatPattern = bgmTick % 8;
+        
+        // 1. 노이즈 하이햇/스네어 연동 드럼 리듬
+        if (beatPattern === 0 || beatPattern === 4) {
+          playTone(75, 'triangle', 0.1, 0.15); // 드럼 킥 (삼각파)
+        }
+        if (beatPattern === 2 || beatPattern === 6) {
+          playNoiseDrum(true, 0.12, 0.05); // 드럼 스네어 (노이즈)
+        } else if (beatPattern % 2 === 1) {
+          playNoiseDrum(false, 0.04, 0.02); // 하이햇 (노이즈)
+        }
+
+        // 2. 춤추듯 흘러가는 경쾌한 무그 베이스 (네모파 - Square)
+        const baseMelody = [130.81, 146.83, 164.81, 196.00, 220.00, 196.00, 164.81, 130.81];
+        const bassNote = baseMelody[bgmTick % baseMelody.length];
+        if (beatPattern % 2 === 0) {
+          playTone(bassNote, 'square', 0.12, 0.045);
+        }
+
+        // 3. 메인 멜로디 파트 (사인파 - Sine)
+        const introChords = [523.25, 587.33, 659.25, 783.99, 880.00, 783.99, 659.25, 587.33];
+        const melNote = introChords[(Math.floor(bgmTick / 2)) % introChords.length];
+        if (beatPattern % 2 === 1) {
+          playTone(melNote, 'sine', 0.18, 0.05);
+        }
+
+        // 4. 아주 화려하고 기분 좋은 리드 백업 코러스 (톱니파 - Sawtooth)
+        if (beatPattern === 3 || beatPattern === 7) {
+          playTone(melNote * 1.5, 'sawtooth', 0.15, 0.015);
+        }
+
+      }, 140); // 아주 신나고 속도감 있는 메인 타이틀 비트 (140ms 간격)
+    }
+
+    function startBgm() {
+      if (bgmInterval) clearInterval(bgmInterval);
+      
+      // 만약 인게임 중이 아니고, 타이틀 오버레이가 살아있다면 타이틀곡을 연주합니다.
+      if (!gameActive && !isDemoMode) {
+        playTitleThemeMusic();
+        return;
+      }
+
+      bgmInterval = setInterval(() => {
+        if (!isSoundOn || (!gameActive && !isDemoMode)) return;
+        
+        const world = getCurrentWorld(currentStage);
+        bgmTick++;
+
+        const beatPattern = bgmTick % 8;
+
+        if (beatPattern === 0 || beatPattern === 4) {
+          playTone(65, 'triangle', 0.15, 0.12);
+        }
+        if (beatPattern === 2 || beatPattern === 6) {
+          playNoiseDrum(true, 0.12, 0.05);
+        }
+        if (beatPattern === 1 || beatPattern === 3 || beatPattern === 5 || beatPattern === 7) {
+          playNoiseDrum(false, 0.04, 0.025);
+        }
+
+        // --- 1. 지상 테마 BGM ---
+        if (world === "ground") {
+          const chords = [261.63, 329.63, 392.00, 440.00]; 
+          if (beatPattern % 2 === 0) {
+            const bassNote = beatPattern < 4 ? 130.81 : 146.83;
+            playTone(bassNote, 'square', 0.15, 0.035);
+          }
+          if (beatPattern % 4 === 0) {
+            const melody = chords[Math.floor(Math.random() * chords.length)];
+            playTone(melody, 'sine', 0.3, 0.045);
+            playTone(melody * 1.5, 'triangle', 0.2, 0.025); 
+          }
+        }
+        // --- 2. 지하 테마 BGM ---
+        else if (world === "under") {
+          const minorChords = [220.00, 261.63, 329.63, 392.00]; 
+          if (beatPattern % 2 === 0) {
+            const bass = beatPattern < 4 ? 73.42 : 82.41; 
+            playTone(bass, 'triangle', 0.22, 0.09);
+          }
+          if (beatPattern % 4 === 2) {
+            const chordNode = minorChords[beatPattern % minorChords.length];
+            playTone(chordNode, 'square', 0.35, 0.02);
+            playTone(chordNode * 1.2, 'sine', 0.4, 0.015);
+          }
+        }
+        // --- 3. 물 속 테마 BGM ---
+        else if (world === "water") {
+          const waterChords = [293.66, 349.23, 440.00, 523.25]; 
+          if (beatPattern % 4 === 0) {
+            playTone(87.31, 'sine', 0.5, 0.08); 
+          }
+          if (beatPattern % 4 === 1) {
+            const waterTone = waterChords[bgmTick % waterChords.length];
+            playTone(waterTone, 'triangle', 0.4, 0.03);
+            playTone(waterTone * 2, 'sine', 0.2, 0.01);
+          }
+        }
+        // --- 4. 하늘 테마 BGM ---
+        else if (world === "sky") {
+          const fastArps = [392.00, 493.88, 587.33, 783.99, 987.77, 1174.66]; 
+          playTone(110.00, 'square', 0.08, 0.035);
+          const arpNode = fastArps[bgmTick % fastArps.length];
+          playTone(arpNode, 'triangle', 0.1, 0.02);
+          playTone(arpNode * 1.5, 'sine', 0.08, 0.01);
+        }
+      }, 160); 
+    }
+
+    // 5. 스테이지 30 엔딩 테마곡
+    function playEndingMusic() {
+      stopBgm();
+      let step = 0;
+      const endingChords = [261.63, 329.63, 392.00, 523.25, 329.63, 392.00, 523.25, 659.25]; 
+      
+      bgmInterval = setInterval(() => {
+        if (!isSoundOn) return;
+        const note = endingChords[step % endingChords.length] * (step % 16 < 8 ? 1 : 1.2);
+        playTone(note, 'sine', 0.45, 0.08);
+        
+        if (step % 4 === 0) {
+          playTone(130.81, 'triangle', 0.2, 0.05); 
+        }
+        step++;
+      }, 250);
+    }
+
+    function stopBgm() {
+      if (bgmInterval) {
+        clearInterval(bgmInterval);
+        bgmInterval = null;
+      }
+    }
+
+    // ----------------------------------------------------
+    // 게임 엔진 및 캔버스 화면 녹화기 모듈 (비공개 이스터에그)
+    // ----------------------------------------------------
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // 상태 바인딩 엘리먼트
+    const scoreVal = document.getElementById('scoreVal');
+    const stageVal = document.getElementById('stageVal');
+    const worldThemeName = document.getElementById('worldThemeName');
+    const livesContainer = document.getElementById('livesContainer');
+    const cheatIndicator = document.getElementById('cheatIndicator');
+    const highScoreVal = document.getElementById('highScoreVal');
+    const overlay = document.getElementById('overlay');
+    const overlayTitle = document.getElementById('overlayTitle');
+    const overlayDesc = document.getElementById('overlayDesc');
+    const startBtn = document.getElementById('startBtn');
+    
+    // 녹화 및 데모 제어 바인딩
+    const recordingBadge = document.getElementById('recordingBadge');
+    const recTypeLabel = document.getElementById('recTypeLabel');
+    const demoBadge = document.getElementById('demoBadge');
+    const demoCountdown = document.getElementById('demoCountdown');
+
+    // 게임 상태 변수
+    let gameActive = false;
+    let score = 0;
+    let currentStage = 1;
+    let highScore = parseInt(localStorage.getItem('rice_jump_high') || '0', 10);
+    highScoreVal.textContent = String(highScore).padStart(4, '0');
+
+    let lives = 3;
+    let isInfiniteLives = false;
+    let shakeDuration = 0; 
+
+    // 화면 녹화 데이터 스토리지
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let isRecording = false;
+    let recordTimer = 0;
+    let recordInterval = null;
+
+    // [신규 피처] 15초 미입력 시 작동하는 데모 타이머 데이터
+    let demoTriggerTimer = null; 
+    let isDemoMode = false;      
+    let demoLimitTimer = null;   
+
+    // 데모 및 미입력 타이머 리셋
+    function resetInactivityTimer() {
+      if (gameActive || isDemoMode) return;
+      
+      let countdownSec = 15;
+      demoCountdown.textContent = `${countdownSec}초 동안 대기 시 오토 데모 비디오가 실행됩니다...`;
+
+      if (demoTriggerTimer) clearInterval(demoTriggerTimer);
+      demoTriggerTimer = setInterval(() => {
+        countdownSec--;
+        demoCountdown.textContent = `${countdownSec}초 동안 대기 시 오토 데모 비디오가 실행됩니다...`;
+        
+        if (countdownSec <= 0) {
+          clearInterval(demoTriggerTimer);
+          startDemoPlay();
+        }
+      }, 1000);
+    }
+
+    // 플레이어 
+    const player = {
+      x: 100,
+      y: 300,
+      width: 28,
+      height: 38,
+      vx: 0,
+      vy: 0,
+      speed: 4.8,
+      gravity: 0.5,
+      jumpForce: -11.5,
+      isGrounded: false,
+      facing: 'right',
+      invincibilityFrames: 0,
+      
+      reset() {
+        this.x = 100;
+        this.y = 300;
+        this.vx = 0;
+        this.vy = 0;
+        this.isGrounded = false;
+        this.invincibilityFrames = 0;
+      },
+
+      jump() {
+        if (this.isGrounded) {
+          this.vy = this.jumpForce;
+          this.isGrounded = false;
+          Sound.jump();
+        }
+      },
+
+      update() {
+        this.vy += this.gravity;
+        this.x += this.vx;
+        this.y += this.vy;
+
+        if (this.x < 0) this.x = 0;
+        if (this.x + this.width > canvas.width) this.x = canvas.width - this.width;
+
+        const groundY = 340;
+        if (this.y + this.height >= groundY) {
+          this.y = groundY - this.height;
+          this.vy = 0;
+          this.isGrounded = true;
+        }
+
+        if (this.invincibilityFrames > 0) {
+          this.invincibilityFrames--;
+        }
+      },
+
+      draw() {
+        if (this.invincibilityFrames > 0 && Math.floor(this.invincibilityFrames / 5) % 2 === 0) {
+          return;
+        }
+
+        ctx.save();
+        if (isInfiniteLives) {
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = '#e9d5ff';
+        }
+
+        const world = getCurrentWorld(currentStage);
+        if (isInfiniteLives) {
+          ctx.fillStyle = '#f472b6'; 
+        } else {
+          if (world === "under") ctx.fillStyle = '#f97316'; 
+          else if (world === "water") ctx.fillStyle = '#38bdf8'; 
+          else if (world === "sky") ctx.fillStyle = '#a855f7'; 
+          else ctx.fillStyle = '#22d3ee'; 
+        }
+
+        ctx.beginPath();
+        ctx.roundRect(this.x, this.y, this.width, this.height, 8);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(this.x, this.y + 6, this.width, 6);
+
+        ctx.fillStyle = '#0f172a';
+        if (this.facing === 'right') {
+          ctx.fillRect(this.x + 18, this.y + 12, 4, 6);
+          ctx.fillRect(this.x + 10, this.y + 12, 4, 6);
+        } else {
+          ctx.fillRect(this.x + 6, this.y + 12, 4, 6);
+          ctx.fillRect(this.x + 14, this.y + 12, 4, 6);
+        }
+
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(this.facing === 'right' ? this.x + 22 : this.x + 2, this.y + 18, 4, 2);
+
+        ctx.restore();
+      }
+    };
+
+    // ----------------------------------------------------
+    // 다이내믹 숨겨진 자폭 장치 유닛
+    // ----------------------------------------------------
+    class HiddenSelfDestructButton {
+      constructor() {
+        this.radius = 20 + Math.random() * 12;
+        this.x = canvas.width + 50 + Math.random() * 300;
+        
+        const spawnTypes = ['ground', 'mid', 'high'];
+        const type = spawnTypes[Math.floor(Math.random() * spawnTypes.length)];
+        
+        if (type === 'ground') {
+          this.y = 340 - this.radius;
+        } else if (type === 'mid') {
+          this.y = 220 + Math.random() * 40;
+        } else {
+          this.y = 120 + Math.random() * 50;
+        }
+
+        this.pulse = Math.random() * Math.PI;
+        this.speed = 2.0 + Math.random() * 1.5;
+        this.clicked = false;
+      }
+
+      update() {
+        this.x -= this.speed;
+        this.pulse += 0.05;
+      }
+
+      draw() {
+        ctx.save();
+        const activeRadius = this.radius + Math.sin(this.pulse) * 3;
+
+        ctx.strokeStyle = `rgba(239, 68, 68, ${0.4 + Math.sin(this.pulse) * 0.3})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, activeRadius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = '#475569';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        const buttonGrad = ctx.createRadialGradient(this.x, this.y - 2, 1, this.x, this.y, this.radius - 4);
+        buttonGrad.addColorStop(0, '#fca5a5');
+        buttonGrad.addColorStop(1, '#b91c1c');
+        ctx.fillStyle = buttonGrad;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius - 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 8px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('⚠️', this.x, this.y);
+
+        ctx.restore();
+      }
+
+      checkCollision(playerObj) {
+        const closestX = Math.max(playerObj.x, Math.min(this.x, playerObj.x + playerObj.width));
+        const closestY = Math.max(playerObj.y, Math.min(this.y, playerObj.y + playerObj.height));
+
+        const distSecX = this.x - closestX;
+        const distSecY = this.y - closestY;
+        const sqDist = (distSecX * distSecX) + (distSecY * distSecY);
+
+        return sqDist < (this.radius * this.radius);
+      }
+    }
+
+    // ----------------------------------------------------
+    // 맵 곳곳에 스폰되어 몰래 떠다니는 녹화기 스위치
+    // ----------------------------------------------------
+    class HiddenRecorderSwitch {
+      constructor(withMic = false) {
+        this.withMic = withMic; 
+        this.width = 32;
+        this.height = 32;
+        this.x = canvas.width + 100 + Math.random() * 200;
+        this.y = 120 + Math.random() * 150; 
+        this.speed = 1.8 + Math.random() * 1.2;
+        this.pulse = 0;
+        this.clicked = false;
+      }
+
+      update() {
+        this.x -= this.speed;
+        this.pulse += 0.08;
+      }
+
+      draw() {
+        ctx.save();
+        
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = this.withMic ? '#ef4444' : '#10b981';
+        
+        ctx.fillStyle = '#1e293b';
+        ctx.strokeStyle = this.withMic ? '#ef4444' : '#10b981';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(this.x, this.y, this.width, this.height, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#334155';
+        ctx.beginPath();
+        ctx.arc(this.x + 16, this.y + 16, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = (Math.sin(this.pulse) > 0) ? '#ef4444' : '#991b1b';
+        ctx.beginPath();
+        ctx.arc(this.x + 24, this.y + 8, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 8px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.withMic ? '🎙️' : '📹', this.x + 12, this.y + 24);
+
+        ctx.restore();
+      }
+
+      checkCollision(playerObj) {
+        return (
+          playerObj.x < this.x + this.width &&
+          playerObj.x + playerObj.width > this.x &&
+          playerObj.y < this.y + this.height &&
+          playerObj.y + playerObj.height > this.y
+        );
+      }
+    }
+
+    // 아이템 및 장애물 군집
+    let rices = [];
+    let nujonkus = [];
+    let mosquitoes = [];
+    let selfDestructButtons = [];
+    let recorderSwitches = []; 
+    let particles = [];
+
+    function spawnExplosion(x, y, colorCount = 20, customColor = '#ef4444') {
+      for(let i=0; i < colorCount; i++) {
+        particles.push({
+          x: x,
+          y: y,
+          vx: (Math.random() - 0.5) * 8,
+          vy: (Math.random() - 0.5) * 8,
+          radius: Math.random() * 4 + 2,
+          color: customColor,
+          life: 30 + Math.random() * 20
+        });
+      }
+    }
+
+    // 모기 정의
+    class Mosquito {
+      constructor(isHuge = false) {
+        this.isHuge = isHuge;
+        this.width = isHuge ? 46 : 22;
+        this.height = isHuge ? 46 : 22;
+        
+        this.x = canvas.width + Math.random() * 80;
+        this.y = 100 + Math.random() * 200;
+        this.speed = isHuge ? (2.2 + Math.random() * 1.3) : (4 + Math.random() * 3);
+        
+        this.waveSpeed = isHuge ? 0.03 : 0.06;
+        this.waveAmplitude = isHuge ? 2.5 : 1.5;
+        this.angle = Math.random() * Math.PI;
+      }
+
+      update() {
+        this.x -= this.speed;
+        this.angle += this.waveSpeed;
+        this.y += Math.sin(this.angle) * this.waveAmplitude;
+      }
+
+      draw() {
+        ctx.save();
+        const wingFlap = Math.sin(Date.now() * 0.06) > 0;
+
+        if (this.isHuge) {
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = '#c084fc';
+          
+          ctx.fillStyle = '#4a044e'; 
+          ctx.beginPath();
+          ctx.ellipse(this.x + 23, this.y + 23, 17, 11, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#f43f5e';
+          ctx.beginPath();
+          ctx.arc(this.x + 11, this.y + 19, 5, 0, Math.PI*2);
+          ctx.arc(this.x + 17, this.y + 15, 4, 0, Math.PI*2);
+          ctx.fill();
+
+          ctx.strokeStyle = '#e9d5ff';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(this.x + 11, this.y + 23);
+          ctx.lineTo(this.x - 5, this.y + 27);
+          ctx.stroke();
+
+          ctx.fillStyle = 'rgba(192, 132, 252, 0.6)';
+          ctx.beginPath();
+          if (wingFlap) {
+            ctx.ellipse(this.x + 23, this.y + 7, 7, 18, Math.PI/6, 0, Math.PI*2);
+          } else {
+            ctx.ellipse(this.x + 23, this.y + 13, 7, 18, -Math.PI/6, 0, Math.PI*2);
+          }
+          ctx.fill();
+        } else {
+          ctx.fillStyle = '#475569';
+          ctx.beginPath();
+          ctx.ellipse(this.x + 11, this.y + 11, 8, 5, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#f43f5e';
+          ctx.fillRect(this.x + 4, this.y + 8, 3, 3);
+
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+          ctx.beginPath();
+          if (wingFlap) {
+            ctx.ellipse(this.x + 11, this.y + 4, 3, 7, Math.PI/8, 0, Math.PI * 2);
+          } else {
+            ctx.ellipse(this.x + 11, this.y + 8, 3, 7, -Math.PI/8, 0, Math.PI * 2);
+          }
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      checkCollision(playerObj) {
+        return (
+          playerObj.x < this.x + this.width &&
+          playerObj.x + playerObj.width > this.x &&
+          playerObj.y < this.y + this.height &&
+          playerObj.y + playerObj.height > this.y
+        );
+      }
+    }
+
+    // ----------------------------------------------------
+    // [비공개 이스터에그] Canvas + Game 오디오 믹스 화면 녹화기
+    // ----------------------------------------------------
+    async function startRecording(withAudio = false) {
+      if (isRecording) return;
+      
+      try {
+        recordedChunks = [];
+        
+        // 1. 비디오 트랙 구성 (Canvas에서 초당 30프레임)
+        const canvasStream = canvas.captureStream(30); 
+        
+        // 2. 오디오 트랙 구성 (Web Audio API 통합 버스)
+        initAudio();
+        const finalStream = new MediaStream();
+        
+        // 비디오 트랙 바인딩
+        canvasStream.getVideoTracks().forEach(track => finalStream.addTrack(track));
+
+        // [신규 핵심 피처] 게임 소리 실시간 믹싱 오디오 트랙 추출 주입
+        if (recordAudioDestination) {
+          const gameAudioTracks = recordAudioDestination.stream.getAudioTracks();
+          gameAudioTracks.forEach(track => finalStream.addTrack(track));
+        }
+
+        // 마이크 오디오 추가 병합 요구사항
+        if (withAudio) {
+          try {
+            const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            // 오디오 컨텍스트 믹싱 기법 활용: 마이크 입력을 오디오 컨텍스트 상의 record 오디오 노드로 통과시킴
+            const micSource = audioCtx.createMediaStreamSource(micStream);
+            const micGain = audioCtx.createGain();
+            micGain.gain.setValueAtTime(0.75, audioCtx.currentTime); // 목소리 선명성 조율
+            micSource.connect(micGain);
+            
+            // 게임 사운드 레코드 목적지로 믹싱
+            micGain.connect(recordAudioDestination);
+            
+          } catch(err) {
+            console.warn("마이크 자격 접근이 거부되었습니다.", err);
+            showToast("⚠️ 마이크 권한이 꺼져 있어 게임 내부 소리만 녹화합니다.");
+          }
+        }
+
+        mediaRecorder = new MediaRecorder(finalStream, {
+          mimeType: 'video/webm;codecs=vp8,opus'
+        });
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            recordedChunks.push(e.data);
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: 'video/webm' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          document.body.appendChild(a);
+          a.style = 'display: none';
+          a.href = url;
+          a.download = withAudio ? 'rice_jump_voice_and_sound.webm' : 'rice_jump_gameplay.webm';
+          a.click();
+          window.URL.revokeObjectURL(url);
+          showToast("💾 1분 분량의 사운드 수록 게임 비디오 파일이 성공적으로 보존 및 다운로드되었습니다!");
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+        recordTimer = 60; 
+
+        recordingBadge.classList.remove('hidden');
+        recordingBadge.classList.add('flex');
+        recTypeLabel.textContent = withAudio ? `VOICE REC (1:00)` : `REC (1:00)`;
+
+        if (recordInterval) clearInterval(recordInterval);
+        recordInterval = setInterval(() => {
+          recordTimer--;
+          recTypeLabel.textContent = withAudio ? `VOICE REC (0:${String(recordTimer).padStart(2, '0')})` : `REC (0:${String(recordTimer).padStart(2, '0')})`;
+          
+          if (recordTimer <= 0) {
+            stopRecording();
+          }
+        }, 1000);
+
+      } catch (err) {
+        console.error("화면 오디오 믹스 레코딩 오류: ", err);
+      }
+    }
+
+    function stopRecording() {
+      if (!isRecording) return;
+      isRecording = false;
+      if (recordInterval) {
+        clearInterval(recordInterval);
+        recordInterval = null;
+      }
+      recordingBadge.classList.add('hidden');
+      recordingBadge.classList.remove('flex');
+      
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+    }
+
+    // ----------------------------------------------------
+    // [신규 피처] 30초 AI 데모 모드 엔진 기동 함수
+    // ----------------------------------------------------
+    function startDemoPlay() {
+      if (gameActive || isDemoMode) return;
+      isDemoMode = true;
+      
+      // 데모 관련 파라미터 강제 리셋
+      score = 0;
+      currentStage = 1;
+      lives = 3;
+      isInfiniteLives = false;
+      rices = [];
+      nujonkus = [];
+      mosquitoes = [];
+      selfDestructButtons = [];
+      recorderSwitches = [];
+      particles = [];
+      
+      scoreVal.textContent = "0000";
+      stageVal.textContent = "1";
+      worldThemeName.textContent = "(데모🌱)";
+      cheatIndicator.classList.add('hidden');
+      updateLivesDisplay();
+
+      player.reset();
+      
+      // 오버레이 및 배지 제어
+      overlay.classList.add('opacity-0', 'pointer-events-none');
+      demoBadge.classList.remove('hidden');
+      demoBadge.classList.add('flex');
+
+      initAudio();
+      startBgm();
+      showToast("📺 AI 조작의 30초 플레이 데모 비디오가 작동 중입니다!");
+
+      // 30초 제한 카운트다운 가동
+      if (demoLimitTimer) clearTimeout(demoLimitTimer);
+      demoLimitTimer = setTimeout(() => {
+        stopDemoPlay();
+      }, 30000); // 30초 경과 시 강제 종료 및 대기 모드 복귀
+    }
+
+    function stopDemoPlay() {
+      if (!isDemoMode) return;
+      isDemoMode = false;
+      stopBgm();
+      stopMosquitoBuzz();
+      
+      if (demoLimitTimer) clearTimeout(demoLimitTimer);
+
+      demoBadge.classList.add('hidden');
+      demoBadge.classList.remove('flex');
+      overlay.classList.remove('opacity-0', 'pointer-events-none');
+      
+      overlayTitle.textContent = "RICE JUMP!";
+      overlayTitle.className = "text-4xl font-black mb-2 text-yellow-400 tracking-wider";
+      overlayDesc.innerHTML = `점프하여 모기를 피하고 쌀알(RICE)과 맛있는 누존쿠 쿠키를 획득하세요!<br>
+                               <span class="text-red-400 font-bold">⚠️ 경고: 맵 곳곳에 무작위로 배치된 빨간 "자폭" 장치를 건드리면 "딸깍" 소리와 함께 폭발합니다!</span>`;
+      
+      startBtn.textContent = "게임 시작!";
+      
+      // 타이틀 테마곡 다시 재생
+      playTitleThemeMusic();
+      resetInactivityTimer();
+    }
+
+    // AI 조작 자동화 디시전 메이킹 (데모 중 매 프레임 기동)
+    function handleDemoDecision() {
+      if (!isDemoMode) return;
+
+      // 1. 가장 가까운 위험물(모기, 자폭 장치) 탐지
+      let dangerX = 9999;
+      let dangerY = 9999;
+      let dangerObj = null;
+
+      mosquitoes.forEach(m => {
+        let dist = m.x - player.x;
+        if (dist > 0 && dist < dangerX) {
+          dangerX = dist;
+          dangerY = m.y;
+          dangerObj = m;
+        }
+      });
+
+      selfDestructButtons.forEach(b => {
+        let dist = b.x - player.x;
+        if (dist > 0 && dist < dangerX) {
+          dangerX = dist;
+          dangerY = b.y;
+          dangerObj = b;
+        }
+      });
+
+      // 2. 가장 가까운 유익함(쌀알, 쿠키) 탐지
+      let foodX = 9999;
+      let foodY = 300;
+      let foodObj = null;
+
+      rices.forEach(r => {
+        let dist = Math.abs(r.x - player.x);
+        if (dist < foodX) {
+          foodX = dist;
+          foodY = r.y;
+          foodObj = r;
+        }
+      });
+
+      nujonkus.forEach(n => {
+        let dist = Math.abs(n.x - player.x);
+        if (dist < foodX) {
+          foodX = dist;
+          foodY = n.y;
+          foodObj = n;
+        }
+      });
+
+      // 3. 의사결정 시뮬레이션
+      player.vx = 0; // 기본 정지
+
+      // 위험물이 가깝게 다가오고 있을 때
+      if (dangerObj && dangerX < 140) {
+        // 위험물이 바닥에 있고 나보다 오른쪽인 경우: 뒤로 피하거나 제자리 높이 뛰어넘기 결정
+        if (dangerY > 240) {
+          if (player.isGrounded) {
+            player.jump();
+          }
+        } else {
+          // 위험물이 공중에 있다면 몸 숙이기 위해 가로 이동 제어
+          player.vx = -player.speed * 0.75;
+          player.facing = 'left';
+        }
+      } 
+      // 위험 구역을 제외하고 가장 가까운 먹이 방향으로 신속 이동
+      else if (foodObj) {
+        if (foodObj.x > player.x + 10) {
+          player.vx = player.speed * 0.8;
+          player.facing = 'right';
+        } else if (foodObj.x < player.x - 10) {
+          player.vx = -player.speed * 0.8;
+          player.facing = 'left';
+        }
+
+        // 먹이가 위쪽에 있으면 도약
+        if (foodY < player.y - 60 && player.isGrounded && Math.random() < 0.2) {
+          player.jump();
+        }
+      } 
+      // 목적이 없을 경우 정 중앙 정렬 유지
+      else {
+        let center = canvas.width / 2;
+        if (player.x < center - 30) {
+          player.vx = player.speed * 0.5;
+          player.facing = 'right';
+        } else if (player.x > center + 30) {
+          player.vx = -player.speed * 0.5;
+          player.facing = 'left';
+        }
+      }
+    }
+
+    // ----------------------------------------------------
+    // 게임 리셋 및 시작
+    // ----------------------------------------------------
+    function startGame() {
+      // 데모 모드가 실행 중이었다면 데모를 먼저 격파하고 인게임으로 편입
+      if (isDemoMode) {
+        stopDemoPlay();
+      }
+
+      if (demoTriggerTimer) clearInterval(demoTriggerTimer);
+
+      gameActive = true;
+      score = 0;
+      currentStage = 1;
+      lives = 3;
+      isInfiniteLives = false;
+      rices = [];
+      nujonkus = [];
+      mosquitoes = [];
+      selfDestructButtons = [];
+      recorderSwitches = [];
+      particles = [];
+      shakeDuration = 0;
+      
+      scoreVal.textContent = "0000";
+      stageVal.textContent = "1";
+      worldThemeName.textContent = "(지상)";
+      cheatIndicator.classList.add('hidden');
+      updateLivesDisplay();
+
+      player.reset();
+      overlay.classList.add('opacity-0', 'pointer-events-none');
+      
+      initAudio();
+      startBgm();
+      showToast("🎮 스테이지 1 진입: 평화로운 지상 BGM!");
+    }
+
+    function triggerGameEnding() {
+      gameActive = false;
+      stopMosquitoBuzz();
+      stopRecording();
+      playEndingMusic();
+
+      for (let j = 0; j < 6; j++) {
+        setTimeout(() => {
+          spawnExplosion(Math.random() * canvas.width, Math.random() * 250, 20, '#f59e0b');
+          spawnExplosion(Math.random() * canvas.width, Math.random() * 250, 20, '#10b981');
+          spawnExplosion(Math.random() * canvas.width, Math.random() * 250, 20, '#3b82f6');
+        }, j * 300);
+      }
+
+      setTimeout(() => {
+        overlay.classList.remove('opacity-0', 'pointer-events-none');
+        overlayTitle.textContent = "CONGRATULATIONS!";
+        overlayTitle.className = "text-4xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-pink-400 to-cyan-400 tracking-wider animate-bounce";
+        
+        overlayDesc.innerHTML = `<span class="text-amber-300 font-bold text-lg">👑 영광의 STAGE 30 정복 성공! 👑</span><br>
+                                 훌륭한 컨트롤로 수많은 모기와 교묘한 자폭 장치를 전부 피하셨습니다.<br>
+                                 쌀 점퍼 히어로가 세상에 평화를 가져왔습니다!<br>
+                                 <strong class="text-cyan-400 text-lg">최종 전리품 점수: ${score}점</strong>`;
+        
+        startBtn.textContent = "처음부터 다시 즐기기";
+        resetInactivityTimer();
+      }, 500);
+    }
+
+    function gameOver(reason = "normal") {
+      gameActive = false;
+      stopBgm();
+      stopMosquitoBuzz();
+      stopRecording();
+
+      if (reason === "self_destruct") {
+        shakeDuration = 50;
+        Sound.selfDestruct();
+        spawnExplosion(player.x + player.width/2, player.y + player.height/2, 60, '#ef4444');
+      } else {
+        Sound.hit();
+        spawnExplosion(player.x + player.width/2, player.y + player.height/2, 30, '#cbd5e1');
+      }
+
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('rice_jump_high', highScore);
+        highScoreVal.textContent = String(highScore).padStart(4, '0');
+      }
+
+      setTimeout(() => {
+        playTone(150, 'sawtooth', 0.6, 0.2);
+        setTimeout(() => playTone(90, 'sawtooth', 0.8, 0.25), 180);
+      }, 150);
+
+      setTimeout(() => {
+        overlay.classList.remove('opacity-0', 'pointer-events-none');
+        overlayTitle.textContent = "GAME OVER";
+        overlayTitle.className = "text-5xl font-black mb-2 text-red-500 tracking-wider";
+        
+        if (reason === "self_destruct") {
+          overlayDesc.innerHTML = `<span class="text-red-500 font-bold text-lg">💥 딸깍! 자폭 시스템 해제 실패!</span><br>
+                                   맵 구석구석 숨어있던 위장 자폭 유닛을 건드렸군요!<br>
+                                   <strong class="text-yellow-400 text-lg">최종 기록: ${score}점 (Stage ${currentStage})</strong>`;
+        } else {
+          overlayDesc.innerHTML = `모기의 정교한 침 습격에 패배했습니다...<br>
+                                   <span class="text-cyan-400 font-bold">최종 기록: ${score}점 (Stage ${currentStage})</span>`;
+        }
+        
+        startBtn.textContent = "다시 도전하기";
+        resetInactivityTimer();
+      }, 450);
+    }
+
+    function updateLivesDisplay() {
+      if (isInfiniteLives) {
+        livesContainer.innerHTML = `<span class="rainbow-text font-game text-xs tracking-widest animate-pulse">♾️ INF</span>`;
+      } else {
+        let heartStr = "";
+        for(let i=0; i<lives; i++) {
+          heartStr += "❤️ ";
+        }
+        livesContainer.innerHTML = heartStr || "💀";
+      }
+    }
+
+    // ----------------------------------------------------
+    // 메인 게임 루프 & 업데이트
+    // ----------------------------------------------------
+    let frameCount = 0;
+
+    function gameLoop() {
+      requestAnimationFrame(gameLoop);
+
+      let dx = 0, dy = 0;
+      if (shakeDuration > 0) {
+        dx = (Math.random() - 0.5) * 10;
+        dy = (Math.random() - 0.5) * 10;
+        shakeDuration--;
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(dx, dy);
+
+      // 테마 변화에 맞춰 배경색 실시간 전환
+      const world = getCurrentWorld(currentStage);
+      let bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      
+      if (world === "under") {
+        bgGrad.addColorStop(0, '#1c0a0a');
+        bgGrad.addColorStop(1, '#070000');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.05)';
+        for(let a=0; a<3; a++) {
+          ctx.fillRect(Math.sin(frameCount*0.01 + a)*canvas.width, 0, 80, canvas.height);
+        }
+      } else if (world === "water") {
+        bgGrad.addColorStop(0, '#02182b');
+        bgGrad.addColorStop(1, '#000814');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+        for (let b = 0; b < 10; b++) {
+          let bx = (b * 90 + frameCount * 0.5) % canvas.width;
+          let by = (b * 45 + Math.sin(frameCount * 0.02 + b) * 20) % canvas.height;
+          ctx.beginPath();
+          ctx.arc(bx, by, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (world === "sky") {
+        bgGrad.addColorStop(0, '#1e1135');
+        bgGrad.addColorStop(1, '#070311');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        for (let s = 0; s < 15; s++) {
+          let sx = (s * 70 - frameCount * 3) % canvas.width;
+          if (sx < 0) sx += canvas.width;
+          ctx.fillRect(sx, (s * 25) % canvas.height, 2, 2);
+        }
+      } else {
+        bgGrad.addColorStop(0, '#090d16');
+        bgGrad.addColorStop(1, '#020408');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      // 격자선
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < canvas.width; i += 40) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, canvas.height);
+        ctx.stroke();
+      }
+      for (let j = 0; j < canvas.height; j += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, j);
+        ctx.lineTo(canvas.width, j);
+        ctx.stroke();
+      }
+
+      // 하단 안전 바닥선
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(0, 340, canvas.width, 60);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 345, canvas.width, 55);
+
+      if (gameActive || isDemoMode) {
+        frameCount++;
+
+        // 데모 연산 도출
+        if (isDemoMode) {
+          handleDemoDecision();
+        }
+
+        // 스테이지 산출 연산
+        let calculatedStage = Math.min(30, 1 + Math.floor(score / 110));
+        if (calculatedStage !== currentStage) {
+          currentStage = calculatedStage;
+          stageVal.textContent = currentStage;
+          
+          const currentTheme = getCurrentWorld(currentStage);
+          if (currentTheme === "under") worldThemeName.textContent = isDemoMode ? "(데모🌋)" : "(지하🌋)";
+          else if (currentTheme === "water") worldThemeName.textContent = isDemoMode ? "(데모🌊)" : "(물속🌊)";
+          else if (currentTheme === "sky") worldThemeName.textContent = isDemoMode ? "(데모🌌)" : "(하늘🌌)";
+          else if (currentTheme === "ending") worldThemeName.textContent = isDemoMode ? "(데모👑)" : "(클리어👑)";
+          else worldThemeName.textContent = isDemoMode ? "(데모🌱)" : "(지상🌱)";
+
+          if (!isDemoMode) {
+            showToast(`🚀 스테이지 ${currentStage} 달성! 음악이 새롭게 변형됩니다.`);
+          }
+          startBgm();
+
+          if (currentStage >= 30) {
+            if (isDemoMode) {
+              stopDemoPlay();
+            } else {
+              triggerGameEnding();
+            }
+          }
+        }
+
+        // 실시간 모기 사운드 변형 전파 
+        const hasNormal = mosquitoes.some(m => !m.isHuge);
+        const hasHuge = mosquitoes.some(m => m.isHuge);
+        updateMosquitoBuzzSound(hasNormal, hasHuge);
+
+        // 플레이어 연산
+        player.update();
+        player.draw();
+
+        // --- 숨겨진 녹화기 스위치 스폰 & 처리 ---
+        if (frameCount % 450 === 0 && recorderSwitches.length < 2) {
+          const withMic = (currentStage >= 15);
+          recorderSwitches.push(new HiddenRecorderSwitch(withMic));
+        }
+
+        for (let i = recorderSwitches.length - 1; i >= 0; i--) {
+          const sw = recorderSwitches[i];
+          sw.update();
+          sw.draw();
+
+          if (sw.checkCollision(player)) {
+            if (!sw.clicked) {
+              sw.clicked = true;
+              
+              Sound.clickSwitch();
+              
+              setTimeout(() => {
+                Sound.beepSignal();
+                // 데모 중에는 실제 장치 녹화 기능 가동을 무시합니다.
+                if (!isDemoMode) {
+                  startRecording(sw.withMic);
+                }
+              }, 150);
+
+              spawnExplosion(sw.x + 16, sw.y + 16, 20, sw.withMic ? '#ef4444' : '#10b981');
+              recorderSwitches.splice(i, 1);
+            }
+            continue;
+          }
+
+          if (sw.x < -100) {
+            recorderSwitches.splice(i, 1);
+          }
+        }
+
+        // --- 맵 곳곳 숨겨진 자폭 장치 관리 ---
+        let bombInterval = Math.max(120, 240 - currentStage * 4);
+        if (frameCount % bombInterval === 0 && selfDestructButtons.length < 3) {
+          selfDestructButtons.push(new HiddenSelfDestructButton());
+        }
+
+        for (let i = selfDestructButtons.length - 1; i >= 0; i--) {
+          const btn = selfDestructButtons[i];
+          btn.update();
+          btn.draw();
+
+          if (btn.checkCollision(player)) {
+            if (!btn.clicked) {
+              btn.clicked = true;
+              Sound.clickSwitch();
+              setTimeout(() => {
+                if (isDemoMode) {
+                  // 데모 모드 도중 사망 시 조용히 다음 세션으로 넘어감
+                  stopDemoPlay();
+                } else {
+                  gameOver("self_destruct");
+                }
+              }, 120);
+            }
+          }
+
+          if (btn.x < -100) {
+            selfDestructButtons.splice(i, 1);
+          }
+        }
+
+        // --- 아이템 & 오브젝트 스폰 패턴 ---
+        if (frameCount % 55 === 0) {
+          rices.push({
+            x: canvas.width + 10,
+            y: 120 + Math.random() * 180,
+            radius: 7,
+            pulse: 0
+          });
+        }
+
+        if (frameCount % 400 === 0) {
+          nujonkus.push({
+            x: canvas.width + 10,
+            y: 100 + Math.random() * 140,
+            width: 24,
+            height: 24
+          });
+        }
+
+        let mosquitoSpawnInterval = Math.max(25, 90 - Math.floor(score / 6));
+        if (frameCount % mosquitoSpawnInterval === 0) {
+          const isHuge = Math.random() < (0.15 + (currentStage * 0.015));
+          mosquitoes.push(new Mosquito(isHuge));
+        }
+
+        // --- 쌀알 수집 처리 ---
+        for (let i = rices.length - 1; i >= 0; i--) {
+          const r = rices[i];
+          r.x -= 3.2;
+
+          ctx.save();
+          r.pulse += 0.1;
+          ctx.fillStyle = '#f8fafc';
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = '#ffffff';
+          ctx.beginPath();
+          ctx.ellipse(r.x, r.y, r.radius + Math.sin(r.pulse)*1.2, r.radius * 0.65, Math.PI / 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+
+          const dist = Math.hypot(player.x + player.width/2 - r.x, player.y + player.height/2 - r.y);
+          if (dist < player.width/2 + r.radius) {
+            rices.splice(i, 1);
+            score += 10;
+            scoreVal.textContent = String(score).padStart(4, '0');
+            Sound.eatRice();
+            spawnExplosion(r.x, r.y, 8, '#ffffff');
+            continue;
+          }
+
+          if (r.x < -20) rices.splice(i, 1);
+        }
+
+        // --- 누존쿠(🍪) 처리 ---
+        for (let i = nujonkus.length - 1; i >= 0; i--) {
+          const n = nujonkus[i];
+          n.x -= 2.5;
+
+          ctx.save();
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = '#fbbf24';
+          ctx.fillStyle = '#d97706';
+          ctx.beginPath();
+          ctx.arc(n.x + 12, n.y + 12, 12, 0, Math.PI*2);
+          ctx.fill();
+          ctx.fillStyle = '#451a03';
+          ctx.fillRect(n.x + 6, n.y + 6, 3, 3);
+          ctx.fillRect(n.x + 14, n.y + 8, 3, 3);
+          ctx.fillRect(n.x + 10, n.y + 14, 3, 3);
+          ctx.restore();
+
+          if (
+            player.x < n.x + n.width &&
+            player.x + player.width > n.x &&
+            player.y < n.y + n.height &&
+            player.y + player.height > n.y
+          ) {
+            nujonkus.splice(i, 1);
+            Sound.eatNujonku();
+            spawnExplosion(n.x + 12, n.y + 12, 15, '#fbbf24');
+            
+            if (Math.random() < 0.7) {
+              isInfiniteLives = true;
+              cheatIndicator.classList.remove('hidden');
+              if (!isDemoMode) {
+                showToast("⚡ 누쫀쿠 파워 획득! 무한 목숨 각성!");
+              }
+              updateLivesDisplay();
+            } else {
+              score += 50;
+              scoreVal.textContent = String(score).padStart(4, '0');
+              if (!isDemoMode) {
+                showToast("🍪 초코칩 쿠키 발견! (+50점)");
+              }
+            }
+            continue;
+          }
+
+          if (n.x < -30) nujonkus.splice(i, 1);
+        }
+
+        // --- 모기 충돌 처리 ---
+        for (let i = mosquitoes.length - 1; i >= 0; i--) {
+          const m = mosquitoes[i];
+          m.update();
+          m.draw();
+
+          if (m.checkCollision(player)) {
+            if (player.invincibilityFrames === 0) {
+              if (isInfiniteLives) {
+                if (m.isHuge) {
+                  isInfiniteLives = false;
+                  lives = 3;
+                  player.invincibilityFrames = 90; 
+                  cheatIndicator.classList.add('hidden');
+                  
+                  shakeDuration = 25;
+                  Sound.nujonkuLost();
+                  spawnExplosion(m.x + m.width/2, m.y + m.height/2, 25, '#c084fc');
+                  mosquitoes.splice(i, 1);
+                  
+                  if (!isDemoMode) {
+                    showToast("⚠️ 왕 모기 피격! 무한 목숨이 풀리고 체력 3개 모드로 전환되었습니다.");
+                  }
+                  updateLivesDisplay();
+                } else {
+                  spawnExplosion(m.x + m.width/2, m.y + m.height/2, 5, '#f472b6');
+                  mosquitoes.splice(i, 1);
+                }
+              } else {
+                if (m.isHuge) {
+                  if (isDemoMode) {
+                    stopDemoPlay();
+                  } else {
+                    gameOver("normal");
+                  }
+                } else {
+                  lives--;
+                  player.invincibilityFrames = 60;
+                  shakeDuration = 15;
+                  Sound.hit();
+                  spawnExplosion(player.x + player.width/2, player.y + player.height/2, 12, '#ef4444');
+                  mosquitoes.splice(i, 1);
+                  
+                  updateLivesDisplay();
+                  if (lives <= 0) {
+                    if (isDemoMode) {
+                      stopDemoPlay();
+                    } else {
+                      gameOver("normal");
+                    }
+                  } else {
+                    if (!isDemoMode) {
+                      showToast(`🦟 모기 습격! 체력 차감 후 잔여 생명력: ${lives}`);
+                    }
+                  }
+                }
+              }
+            }
+            continue;
+          }
+
+          if (m.x < -60) mosquitoes.splice(i, 1);
+        }
+
+        // --- 파티클 시뮬레이션 ---
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.life--;
+          
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.life / 50;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1.0;
+
+          if (p.life <= 0) particles.splice(i, 1);
+        }
+
+      } else {
+        // 게임 대기 상태일 때는 로고 및 배경 자폭 장식 렌더링
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+        ctx.font = '32px "Press Start 2P"';
+        ctx.textAlign = 'center';
+        ctx.fillText('RICE JUMP!', canvas.width / 2, canvas.height / 2 - 40);
+      }
+
+      ctx.restore();
+    }
+
+    // ----------------------------------------------------
+    // 입력 바인딩 및 데모 인터럽션(중단) 감지 처리
+    // ----------------------------------------------------
+    const keys = {};
+
+    function interruptDemoMode() {
+      if (isDemoMode) {
+        showToast("🎮 데모 모드가 취소되고 게임 대기 모드로 돌아왔습니다.");
+        stopDemoPlay();
+      } else {
+        // 일반 상태인 경우 미입력 타이머 리셋
+        resetInactivityTimer();
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      // 1. 데모 상호작용 개입 시 데모 해제
+      interruptDemoMode();
+
+      keys[e.key] = true;
+      if (['ArrowUp', ' ', 'ArrowLeft', 'ArrowRight', 'w', 'a', 'd', 'W', 'A', 'D'].includes(e.key)) {
+        e.preventDefault();
+      }
+
+      if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+        if (gameActive) player.jump();
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      keys[e.key] = false;
+    });
+
+    // 마우스 클릭 또는 터치 동작 시에도 데모 모드 해제
+    window.addEventListener('mousedown', () => {
+      interruptDemoMode();
+    });
+    window.addEventListener('touchstart', () => {
+      interruptDemoMode();
+    }, {passive: true});
+
+    function handleMovement() {
+      if (!gameActive || isDemoMode) return;
+      player.vx = 0;
+      
+      if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+        player.vx = -player.speed;
+        player.facing = 'left';
+      }
+      if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+        player.vx = player.speed;
+        player.facing = 'right';
+      }
+    }
+
+    setInterval(handleMovement, 1000 / 60);
+
+    // 모바일 터치 패드 바인딩
+    const btnLeft = document.getElementById('btnLeft');
+    const btnRight = document.getElementById('btnRight');
+    const btnJump = document.getElementById('btnJump');
+
+    btnLeft.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      interruptDemoMode();
+      keys['ArrowLeft'] = true;
+    });
+    btnLeft.addEventListener('touchend', () => {
+      keys['ArrowLeft'] = false;
+    });
+
+    btnRight.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      interruptDemoMode();
+      keys['ArrowRight'] = true;
+    });
+    btnRight.addEventListener('touchend', () => {
+      keys['ArrowRight'] = false;
+    });
+
+    btnJump.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      interruptDemoMode();
+      if (gameActive) player.jump();
+    });
+
+    // 사운드 시스템 제어
+    const soundToggle = document.getElementById('soundToggle');
+    const soundIcon = document.getElementById('soundIcon');
+    soundToggle.addEventListener('click', () => {
+      isSoundOn = !isSoundOn;
+      if (isSoundOn) {
+        soundIcon.setAttribute('data-lucide', 'volume-2');
+        soundToggle.classList.remove('bg-slate-800/80');
+        soundToggle.classList.add('bg-sky-950/40', 'border-sky-500/30');
+        soundToggle.querySelector('span').textContent = "소리 켬";
+        showToast("🔊 전 공간 BGM 및 모기 소리 합성기가 연동되었습니다.");
+        
+        initAudio();
+        if (gameActive || isDemoMode) {
+          startBgm();
+        } else {
+          playTitleThemeMusic();
+        }
+      } else {
+        soundIcon.setAttribute('data-lucide', 'volume-x');
+        soundToggle.classList.add('bg-slate-800/80');
+        soundToggle.classList.remove('bg-sky-950/40', 'border-sky-500/30');
+        soundToggle.querySelector('span').textContent = "소리 끔";
+        showToast("🔇 모든 사운드가 뮤트되었습니다.");
+        stopBgm();
+        stopMosquitoBuzz();
+      }
+      lucide.createIcons();
+    });
+
+    // 토스트 알림 제어
+    let toastTimeout = null;
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      if (toast && toastMsg) {
+        toastMsg.textContent = message;
+        toast.style.opacity = '1';
+        toast.style.transform = 'translate(-50%, 0px)';
+
+        if (toastTimeout) clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translate(-50%, 16px)';
+        }, 2500);
+      }
+    }
+
+    // 도움말 모달
+    const helpBtn = document.getElementById('helpBtn');
+    const helpModal = document.getElementById('helpModal');
+    const closeHelpBtn = document.getElementById('closeHelpBtn');
+    const closeHelpBtn2 = document.getElementById('closeHelpBtn2');
+
+    helpBtn.addEventListener('click', () => {
+      helpModal.classList.remove('hidden');
+    });
+    [closeHelpBtn, closeHelpBtn2].forEach(btn => {
+      btn.addEventListener('click', () => {
+        helpModal.classList.add('hidden');
+      });
+    });
+
+    // 시작 오버레이 바인딩
+    startBtn.addEventListener('click', () => {
+      startGame();
+    });
+
+    // 브라우저 윈도우 최초 인터랙션 시 오디오 활성화 및 타이틀 음악 구동 트리거
+    window.addEventListener('click', () => {
+      if (isSoundOn && !bgmInterval && !gameActive && !isDemoMode) {
+        initAudio();
+        playTitleThemeMusic();
+      }
+    }, { once: true });
+
+    // 초기 상태 세팅 및 루프 시작
+    gameLoop();
+    resetInactivityTimer();
+  </script>
+</body>
+</html>
